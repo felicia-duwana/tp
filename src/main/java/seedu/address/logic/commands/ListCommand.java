@@ -9,6 +9,7 @@ import seedu.address.commons.util.ToStringBuilder;
 import seedu.address.logic.Messages;
 import seedu.address.model.Model;
 import seedu.address.model.friend.Friend;
+import seedu.address.model.friend.FriendSortCriterion;
 import seedu.address.model.friend.GameNameMatchesPredicate;
 
 /**
@@ -19,35 +20,57 @@ public class ListCommand extends Command {
     public static final String COMMAND_WORD = "list";
 
     public static final String MESSAGE_USAGE = COMMAND_WORD + ": Lists all friends, or only friends who play "
-            + "the specified game (case-insensitive).\n"
-            + "Parameters: [g/GAME_NAME]\n"
-            + "Example: " + COMMAND_WORD + " g/Valorant";
+            + "the specified game (case-insensitive), optionally sorted by name or game.\n"
+            + "Parameters: [g/GAME_NAME] [s/NAME|GAME]\n"
+            + "Example: " + COMMAND_WORD + " g/Valorant s/name";
 
     public static final String MESSAGE_SUCCESS = "Listed all friends.";
 
     private final Predicate<Friend> predicate;
     private final boolean isFilteredByGame;
+    private final FriendSortCriterion sortCriterion;
 
     /**
      * Creates a command that lists all friends.
      */
     public ListCommand() {
+        this((FriendSortCriterion) null);
+    }
+
+    /**
+     * Creates a command that lists all friends sorted by the given criterion.
+     */
+    public ListCommand(FriendSortCriterion sortCriterion) {
         predicate = PREDICATE_SHOW_ALL_FRIENDS;
         isFilteredByGame = false;
+        this.sortCriterion = sortCriterion;
     }
 
     /**
      * Creates a command that lists friends matching the given game predicate.
      */
     public ListCommand(GameNameMatchesPredicate predicate) {
+        this(predicate, null);
+    }
+
+    /**
+     * Creates a command that lists friends matching the given game predicate, sorted by the given criterion.
+     */
+    public ListCommand(GameNameMatchesPredicate predicate, FriendSortCriterion sortCriterion) {
         this.predicate = requireNonNull(predicate);
         isFilteredByGame = true;
+        this.sortCriterion = sortCriterion;
     }
 
     @Override
     public CommandResult execute(Model model) {
         requireNonNull(model);
         model.updateFilteredFriendList(predicate);
+        if (sortCriterion == null) {
+            model.clearFriendListSort();
+        } else {
+            model.sortFilteredFriendList(sortCriterion);
+        }
 
         if (!isFilteredByGame) {
             return new CommandResult(MESSAGE_SUCCESS);
@@ -68,7 +91,8 @@ public class ListCommand extends Command {
         }
 
         return predicate.equals(otherListCommand.predicate)
-                && isFilteredByGame == otherListCommand.isFilteredByGame;
+                && isFilteredByGame == otherListCommand.isFilteredByGame
+                && sortCriterion == otherListCommand.sortCriterion;
     }
 
     @Override
@@ -76,6 +100,7 @@ public class ListCommand extends Command {
         return new ToStringBuilder(this)
                 .add("predicate", predicate)
                 .add("isFilteredByGame", isFilteredByGame)
+                .add("sortCriterion", sortCriterion)
                 .toString();
     }
 }
